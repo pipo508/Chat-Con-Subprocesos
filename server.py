@@ -23,3 +23,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor_socket:
                 break
             print(f"Mensaje del cliente: {data.decode()}")
             conexion_cliente.sendall(data)
+            
+            # Enviar mensaje de vuelta al cliente
+            mensaje_respuesta = input("Responder al cliente: ")
+            conexion_cliente.sendall(mensaje_respuesta.encode())
