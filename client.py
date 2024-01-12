@@ -1,19 +1,44 @@
 import socket
+import threading
+import os
 
-# Configuración del cliente
-HOST = '127.0.0.1'
-PORT = 12345
-
-# Crear un socket del cliente
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as cliente_socket:
-    cliente_socket.connect((HOST, PORT))
-    print(f"Conectado al servidor en {HOST}:{PORT}")
-
+def receive_messages(client_socket):
     while True:
-        # Enviar un mensaje al servidor
-        mensaje = input("Mensaje a enviar al servidor: ")
-        cliente_socket.sendall(mensaje.encode())
+        try:
+            username = client_socket.recv(1024).decode('utf-8')
+            message = client_socket.recv(1024).decode('utf-8')
+            print(f"{username}:{message}")
+            
+        except Exception as e:
+            print(f"Error: {e}")
+            break
 
-        # Recibir la respuesta del servidor
-        data = cliente_socket.recv(1024)
-        print(f"Respuesta del servidor: {data.decode()}")
+def main():
+    host = '127.0.0.1'
+    port = 5555
+
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((host, port))
+    print(f"Conexión establecida con {host}:{port}")
+
+    # Solicitar el nombre al usuario
+    username = input("Ingresa tu nombre: ")
+
+    # Enviar el nombre al servidor
+    client.send(username.encode('utf-8'))
+
+    receive_thread = threading.Thread(target=receive_messages, args=(client,))
+    receive_thread.start()
+    count = 0
+    while True:
+        if count == 0:
+            """print("\033[A\033[K", end='', flush=True)"""
+            count += 1
+        message = input(f"{username}:")
+        if message == "exit":
+            break
+        client.send(username.encode('utf-8'))
+        client.send(message.encode('utf-8'))
+
+if __name__ == "__main__":
+    main()

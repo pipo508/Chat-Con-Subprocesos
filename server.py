@@ -1,29 +1,47 @@
 import socket
+import threading
 
-# Configuración del servidor
-HOST = '127.0.0.1'
-PORT = 12345
-
-# Crear un socket del servidor
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor_socket:
-    servidor_socket.bind((HOST, PORT))
-    servidor_socket.listen()
-
-    print(f"Servidor escuchando en {HOST}:{PORT}")
-
-    # Esperar a que un cliente se conecte
-    conexion_cliente, direccion_cliente = servidor_socket.accept()
-    with conexion_cliente:
-        print(f"Conectado por {direccion_cliente}")
-
-        # Manejar la conexión con el cliente
-        while True:
-            data = conexion_cliente.recv(1024)
-            if not data:
+def handle_client(client_socket, address, clients, username):
+    while True:
+        try:
+            message = client_socket.recv(1024).decode('utf-8')
+            if not message:
                 break
-            print(f"Mensaje del cliente: {data.decode()}")
-            conexion_cliente.sendall(data)
             
-            # Enviar mensaje de vuelta al cliente
-            mensaje_respuesta = input("Responder al cliente: ")
-            conexion_cliente.sendall(mensaje_respuesta.encode())
+            # Reenviar el mensaje a todos los clientes conectados
+            for c in clients:
+                if c != client_socket:
+                    c.send(username.encode('utf-8'))
+                    c.send(message.encode('utf-8'))
+                    print(f"Mensaje de {username}: {message}")
+        except Exception as e:
+            print(f"Error: {e}")
+            break
+
+    print(f"Conexión con {username} cerrada.")
+    clients.remove(client_socket)
+    client_socket.close()
+
+def main():
+    host = '127.0.0.1'
+    port = 5555
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((host, port))
+    server.listen()
+
+    print(f"Servidor escuchando en {host}:{port}")
+
+    clients = []
+
+    while True:
+        client_socket, address = server.accept()
+        username = client_socket.recv(1024).decode('utf-8')
+        clients.append(client_socket)
+        print(f"Conexión establecida con {username} [Host: {address[0]} Port: {port}]")
+
+        client_handler = threading.Thread(target=handle_client, args=(client_socket, address, clients, username))
+        client_handler.start()
+
+if __name__ == "__main__":
+    main()
